@@ -34,7 +34,7 @@ void testApp::setup(){
     ourResultTexture = *  new ofTexture();
     ourResultTexture.allocate(width, height, GL_RGB);
 	edgePixels = new unsigned char[width*height*3];
-	ourResultPixels = new unsigned char[width*height*4];
+	ourResultPixels = new unsigned char[width*height*3];
     morph(); // morphs, outputs to input again!!
 
     vectorField.setup(width, height, 10);
@@ -179,7 +179,7 @@ void testApp::morph() {
     string line;
     stringstream lineStream;
     line = featureBuffer.getFirstLine();
-    while (!featureBuffer.isLastLine()) {
+    while (true) {
         lineStream << line;
         lineStream >> asx >> asy >> aex >> aey >> bsx >> bsy >> bex >> bey;
         ofPoint p1=ofPoint(asx,asy);
@@ -188,7 +188,10 @@ void testApp::morph() {
         ofPoint p3=ofPoint(bsx,bsy);
         ofPoint p4=ofPoint(bex,bey);
         destFeatures.push_back(make_pair(p3,p4));
-        line = featureBuffer.getNextLine();
+        if (featureBuffer.isLastLine())
+            break;
+        else
+            line = featureBuffer.getNextLine();
     }
     featureNum = destFeatures.size();
     vector< pair <ofPoint, ofPoint> > targetFeatures(featureNum);
@@ -207,7 +210,7 @@ void testApp::morph() {
             double sumsdx=0, sumsdy=0, sumddx=0, sumddy=0, sumweight=0;
             for (int i=0; i<featureNum; i++) {
 
-                pair<ofPoint,ofPoint> tp = targetFeatures[i];
+                pair<ofPoint,ofPoint> tp = destFeatures[i];
 
                 vx =  tp.second.y - tp.first.y;
                 vy = -tp.second.x + tp.first.x;
@@ -231,7 +234,7 @@ void testApp::morph() {
                   v = abs(rawv);
                 }
                 double lineLength = length(hx, hy);
-                weight = lineLength/(0.1+v);
+                weight = pow ((pow(lineLength, 2)/(0.3+v)), 1);
                 if (weight < 0) weight = 0;
 
                 pair<ofPoint, ofPoint> sf = srcFeatures[i];
@@ -241,38 +244,24 @@ void testApp::morph() {
                 sumsdx += sdx*weight;
                 sumsdy += sdy*weight;
 
-                pair<ofPoint, ofPoint> df = destFeatures[i];
-                ofPoint dp = getMappingPoint(df.first, df.second, u, rawv);
-                double ddx = x - dp.x;
-                double ddy = y - dp.y;
-                sumddx += ddx*weight;
-                sumddy += ddy*weight;
-
                 sumweight += weight;
             }
 
             double avesdx = sumsdx/sumweight;
             double avesdy = sumsdy/sumweight;
-            double aveddx = sumddx/sumweight;
-            double aveddy = sumddy/sumweight;
 
             int sx = (int)(x - avesdx);
             int sy = (int)(y - avesdy);
-            int dx = (int)(x - aveddx);
-            int dy = (int)(y - aveddy);
             if (sx < 0 || sx > referenceImage.width || sy < 0 || sy > referenceImage.height) {
-              continue;
-            }
-            if (dx < 0 || dx > inputImage.width || dy < 0 || dy > inputImage.height) {
               continue;
             }
             unsigned char dR,dG,dB, sR,sG,sB, tR,tG,tB;
 
-            ourGetPixel(dx,dy,&dR,&dG,&dB,width,ourImagePixels);
+            ourGetPixel(x,y,&dR,&dG,&dB,width,ourImagePixels);
             ourGetPixel(sx,sy,&sR,&sG,&sB,width,ourReferencePixels);
-            tR = sR+(dR-sR)/2;
-            tG = sG+(dG-sG)/2;
-            tB = sB+(dB-sB)/2;
+            tR = sR+(dR-sR)/3;
+            tG = sG+(dG-sG)/3;
+            tB = sB+(dB-sB)/3;
             CLIP(tR,0,255);
             CLIP(tG,0,255);
             CLIP(tB,0,255);
