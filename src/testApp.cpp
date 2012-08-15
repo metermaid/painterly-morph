@@ -1,13 +1,5 @@
 #include "testApp.h"
 using namespace std;
-int threshold = 30;
-
-
-#define mA 0.1
-#define mP 1
-#define mB 1
-#define FRAMENUM 60
-#define GAIN 40.0
 
 string picture = "anne";
 //--------------------------------------------------------------
@@ -182,7 +174,7 @@ void testApp::morph() {
     vector< pair <ofPoint, ofPoint> > destFeatures; // THIS IS INPUT
 
     ofBuffer featureBuffer = ofBufferFromFile(pointFile);
-    double asx, asy, aex, aey, bsx, bsy, bex, bey;
+    float asx, asy, aex, aey, bsx, bsy, bex, bey;
     int featureNum;
     featureNum = featureBuffer.size();
     string line;
@@ -216,21 +208,21 @@ void testApp::morph() {
     for (int y=0; y<height; y++) {
         for (int x=0; x<width; x++) {
             // warping
-            double sumsdx=0, sumsdy=0, sumddx=0, sumddy=0, sumweight=0;
+            float sumsdx=0, sumsdy=0, sumddx=0, sumddy=0, sumweight=0;
             for (int i=0; i<featureNum; i++) {
-                double u,v,rawv,weight;
+                float u,v,rawv,weight;
                 pair<ofPoint,ofPoint> tp = targetFeatures[i];
 
-                double vx =  tp.second.y - tp.first.y;
-                double vy = -tp.second.x + tp.first.x;
-                double hx =  tp.second.x - tp.first.x;
-                double hy =  tp.second.y - tp.first.y;
-                double tx =  x - tp.first.x;
-                double ty =  y - tp.first.y;
+                float vx =  tp.second.y - tp.first.y;
+                float vy = -tp.second.x + tp.first.x;
+                float hx =  tp.second.x - tp.first.x;
+                float hy =  tp.second.y - tp.first.y;
+                float tx =  x - tp.first.x;
+                float ty =  y - tp.first.y;
 
                 // calc u
                 u = (tx*hx + ty*hy) / lengthSquare(hx,hy);
-                double vu = length(vx, vy);
+                float vu = length(vx, vy);
                 rawv = (vx*tx + vy*ty) / vu;
                 if (u <= 0) {
                   // v = PX
@@ -242,31 +234,31 @@ void testApp::morph() {
                   // vertical vector length
                   v = abs(rawv);
                 }
-                double lineLength = length(hx, hy);
-                weight = pow ((pow(lineLength, mP)/(mA+v)), mB);
-                CLIP(weight, 0, 1000);
+                float lineLength = length(hx, hy);
+                weight = lineLength/(0.1+v);
+                if (weight < 0) weight = 0;
 
                 pair<ofPoint, ofPoint> sf = srcFeatures[i];
                 ofPoint sp = getMappingPoint(sf.first, sf.second, u, rawv);
-                double sdx = x - sp.x;
-                double sdy = y - sp.y;
+                float sdx = x - sp.x;
+                float sdy = y - sp.y;
                 sumsdx += sdx*weight;
                 sumsdy += sdy*weight;
 
                 pair<ofPoint, ofPoint> df = destFeatures[i];
                 ofPoint dp = getMappingPoint(df.first, df.second, u, rawv);
-                double ddx = x - dp.x;
-                double ddy = y - dp.y;
+                float ddx = x - dp.x;
+                float ddy = y - dp.y;
                 sumddx += ddx*weight;
                 sumddy += ddy*weight;
 
                 sumweight += weight;
             }
 
-            double avesdx = sumsdx/sumweight;
-            double avesdy = sumsdy/sumweight;
-            double aveddx = sumddx/sumweight;
-            double aveddy = sumddy/sumweight;
+            float avesdx = sumsdx/sumweight;
+            float avesdy = sumsdy/sumweight;
+            float aveddx = sumddx/sumweight;
+            float aveddy = sumddy/sumweight;
 
             int sx = (int)(x - avesdx);
             int sy = (int)(y - avesdy);
@@ -278,13 +270,13 @@ void testApp::morph() {
             if (dx < 0 || dx > referenceImage.width || dy < 0 || dy > referenceImage.height) {
               continue;
             }
-            unsigned char R,G,B, sR,sG,sB, tR,tG,tB;
+            unsigned char dR,dG,dB, sR,sG,sB, tR,tG,tB;
 
-            ourGetPixel(x,y,&R,&G,&B,width,ourImagePixels);
-            ourGetPixel(x,y,&sR,&sG,&sB,width,ourReferencePixels);
-            tR = R+(R+sR)/2;
-            tG = G+(G+sG)/2;
-            tB = B+(B+sB)/2;
+            ourGetPixel(dx,dy,&dR,&dG,&dB,width,ourImagePixels);
+            ourGetPixel(sx,sy,&sR,&sG,&sB,width,ourReferencePixels);
+            tR = sR+(dR-sR)/2;
+            tG = sG+(dG-sG)/2;
+            tB = sB+(dB-sB)/2;
             CLIP(tR,0,255);
             CLIP(tG,0,255);
             CLIP(tB,0,255);
@@ -549,23 +541,23 @@ void testApp::clearPixelArrays(unsigned char* pixelArray,int Width,int Height,un
 	}
 }
 
-double testApp::lengthSquare (double x, double y) {
+float testApp::lengthSquare (float x, float y) {
   return pow(x,2)+pow(y,2);
 }
 
-double testApp::length (double x, double y) {
+float testApp::length (float x, float y) {
   return pow(lengthSquare(x,y),0.5);
 }
 
-ofPoint testApp::getMappingPoint (ofPoint p, ofPoint q, double u, double v) {
-  double vx =  q.y - p.y;
-  double vy = -q.x + p.x;
-  double hx =  q.x - p.x;
-  double hy =  q.y - p.y;
-  double vu = length(vx, vy);
+ofPoint testApp::getMappingPoint (ofPoint p, ofPoint q, float u, float v) {
+  float vx =  q.y - p.y;
+  float vy = -q.x + p.x;
+  float hx =  q.x - p.x;
+  float hy =  q.y - p.y;
+  float vu = length(vx, vy);
 
-  double sx = p.x + u*hx + (vx/vu)*v;
-  double sy = p.y + u*hy + (vy/vu)*v;
+  float sx = p.x + u*hx + (vx/vu)*v;
+  float sy = p.y + u*hy + (vy/vu)*v;
 
   return ofPoint(sx, sy);
 }
