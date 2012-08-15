@@ -1,7 +1,7 @@
 #include "testApp.h"
 using namespace std;
 
-string picture = "anne";
+string picture = "chanel";
 //--------------------------------------------------------------
 void testApp::setup(){
 
@@ -28,14 +28,14 @@ void testApp::setup(){
 	edgeImage = inputImage;
     referenceImage.loadImage("composite.jpg");
     pointFile = (picture + ".txt");
-    morph(); // morphs, outputs to input again!!
-
     ourImagePixels = inputImage.getPixels();
     ourReferencePixels = referenceImage.getPixels();
-    ourResultTexture = *  new ofTexture();								// create a ofTexture to hold the result info
-	ourResultTexture.allocate(width, height, GL_RGB);					// allocate memory for the ofTextue (This is RGB no Alpha)
+
+    ourResultTexture = *  new ofTexture();
+    ourResultTexture.allocate(width, height, GL_RGB);
 	edgePixels = new unsigned char[width*height*3];
 	ourResultPixels = new unsigned char[width*height*4];
+    morph(); // morphs, outputs to input again!!
 
     vectorField.setup(width, height, 10);
     vectorField.setFromImage(inputImage);
@@ -44,20 +44,19 @@ void testApp::setup(){
 	vectorField.bias(0, 0.5);
 	vectorField.blur();
 
-	coarse.loadImage("large.png");								// load brush images for big size brush stroke
-	coarse.resize(200,90);										// set its size
+	coarse.loadImage("large.png");
+	coarse.resize(200,90);
 
-	medium.loadImage("medium.png");							// middle size brush
+	medium.loadImage("medium.png");
 	medium.resize(100,45);
 
-	fine.loadImage("small.png");								// small brush
-	fine.resize(17,8);
+	fine.loadImage("small.png");
+    fine.resize(17,8);
 
-	edge.loadImage("edge.png");								// small brush
+	edge.loadImage("edge.png");
 	edge.resize(2,2);
 
-	ofEnableAlphaBlending();
-
+    ofEnableAlphaBlending();
 }
 //--------------------------------------------------------------
 void testApp::update(){
@@ -174,9 +173,9 @@ void testApp::morph() {
     vector< pair <ofPoint, ofPoint> > destFeatures; // THIS IS INPUT
 
     ofBuffer featureBuffer = ofBufferFromFile(pointFile);
-    float asx, asy, aex, aey, bsx, bsy, bex, bey;
+    double asx, asy, aex, aey, bsx, bsy, bex, bey;
     int featureNum;
-    featureNum = featureBuffer.size();
+
     string line;
     stringstream lineStream;
     line = featureBuffer.getFirstLine();
@@ -191,8 +190,7 @@ void testApp::morph() {
         destFeatures.push_back(make_pair(p3,p4));
         line = featureBuffer.getNextLine();
     }
-
-
+    featureNum = destFeatures.size();
     vector< pair <ofPoint, ofPoint> > targetFeatures(featureNum);
 
     // calculate intermediate feature line
@@ -203,26 +201,24 @@ void testApp::morph() {
         ofPoint t2 = ofPoint( (0.5F)*sp.second.x + 0.5F*dp.second.x, (0.5F)*sp.second.y + 0.5F*dp.second.y );
         targetFeatures[i] = make_pair(t1, t2);
     }
-
-    // calculate warped images from src image and dest image, and cross-dissolve two warped images into target image
+    double u,vu,v,rawv,weight,vx,vy,hx,hy,tx,ty;
     for (int y=0; y<height; y++) {
         for (int x=0; x<width; x++) {
-            // warping
-            float sumsdx=0, sumsdy=0, sumddx=0, sumddy=0, sumweight=0;
+            double sumsdx=0, sumsdy=0, sumddx=0, sumddy=0, sumweight=0;
             for (int i=0; i<featureNum; i++) {
-                float u,v,rawv,weight;
+
                 pair<ofPoint,ofPoint> tp = targetFeatures[i];
 
-                float vx =  tp.second.y - tp.first.y;
-                float vy = -tp.second.x + tp.first.x;
-                float hx =  tp.second.x - tp.first.x;
-                float hy =  tp.second.y - tp.first.y;
-                float tx =  x - tp.first.x;
-                float ty =  y - tp.first.y;
+                vx =  tp.second.y - tp.first.y;
+                vy = -tp.second.x + tp.first.x;
+                hx =  tp.second.x - tp.first.x;
+                hy =  tp.second.y - tp.first.y;
+                tx =  x - tp.first.x;
+                ty =  y - tp.first.y;
 
                 // calc u
                 u = (tx*hx + ty*hy) / lengthSquare(hx,hy);
-                float vu = length(vx, vy);
+                vu = length(vx, vy);
                 rawv = (vx*tx + vy*ty) / vu;
                 if (u <= 0) {
                   // v = PX
@@ -234,53 +230,53 @@ void testApp::morph() {
                   // vertical vector length
                   v = abs(rawv);
                 }
-                float lineLength = length(hx, hy);
+                double lineLength = length(hx, hy);
                 weight = lineLength/(0.1+v);
                 if (weight < 0) weight = 0;
 
                 pair<ofPoint, ofPoint> sf = srcFeatures[i];
                 ofPoint sp = getMappingPoint(sf.first, sf.second, u, rawv);
-                float sdx = x - sp.x;
-                float sdy = y - sp.y;
+                double sdx = x - sp.x;
+                double sdy = y - sp.y;
                 sumsdx += sdx*weight;
                 sumsdy += sdy*weight;
 
                 pair<ofPoint, ofPoint> df = destFeatures[i];
                 ofPoint dp = getMappingPoint(df.first, df.second, u, rawv);
-                float ddx = x - dp.x;
-                float ddy = y - dp.y;
+                double ddx = x - dp.x;
+                double ddy = y - dp.y;
                 sumddx += ddx*weight;
                 sumddy += ddy*weight;
 
                 sumweight += weight;
             }
 
-            float avesdx = sumsdx/sumweight;
-            float avesdy = sumsdy/sumweight;
-            float aveddx = sumddx/sumweight;
-            float aveddy = sumddy/sumweight;
+            double avesdx = sumsdx/sumweight;
+            double avesdy = sumsdy/sumweight;
+            double aveddx = sumddx/sumweight;
+            double aveddy = sumddy/sumweight;
 
             int sx = (int)(x - avesdx);
             int sy = (int)(y - avesdy);
             int dx = (int)(x - aveddx);
             int dy = (int)(y - aveddy);
-            if (sx < 0 || sx > inputImage.width || sy < 0 || sy > inputImage.height) {
+            if (sx < 0 || sx > referenceImage.width || sy < 0 || sy > referenceImage.height) {
               continue;
             }
-            if (dx < 0 || dx > referenceImage.width || dy < 0 || dy > referenceImage.height) {
+            if (dx < 0 || dx > inputImage.width || dy < 0 || dy > inputImage.height) {
               continue;
             }
             unsigned char dR,dG,dB, sR,sG,sB, tR,tG,tB;
 
             ourGetPixel(dx,dy,&dR,&dG,&dB,width,ourImagePixels);
             ourGetPixel(sx,sy,&sR,&sG,&sB,width,ourReferencePixels);
-            tR = sR+(dR-sR)/2;
-            tG = sG+(dG-sG)/2;
-            tB = sB+(dB-sB)/2;
+            tR = dR+(sR-dR)/3;
+            tG = dG+(sG-dG)/3;
+            tB = dB+(sB-dB)/3;
             CLIP(tR,0,255);
             CLIP(tG,0,255);
             CLIP(tB,0,255);
-            ourSetPixel(x,y,tR,tG,tB,width,ourImagePixels);
+            ourSetPixel(x,y,dR,dG,dB,width,ourImagePixels);
         }
     }
 
@@ -355,11 +351,17 @@ void testApp::keyPressed  (int key){
     else {
         return;
     }
+	height = inputImage.height;
+    width = inputImage.width;
     inputImage.loadImage(picture+".jpg");
     pointFile = (picture + ".txt");
-    morph(); // morphs, outputs to input again!!
 	ourImagePixels = inputImage.getPixels();
-	ourResultTexture.allocate(width, height, GL_RGB);					// allocate memory for the ofTextue (This is RGB no Alpha)
+    morph(); // morphs, outputs to input again!!
+    ourResultTexture = *  new ofTexture();
+    ourResultTexture.allocate(width, height, GL_RGB);
+    edgePixels = new unsigned char[width*height*3];
+    ourResultPixels = new unsigned char[width*height*4];
+    ofSetWindowShape(width, height);
     /*
     vectorField.setFromImage(inputImage);
     vectorField.normalize();
@@ -473,7 +475,6 @@ void testApp::copyPixelArrays(unsigned char* sourceArray,unsigned char* destArra
 	for (int y = 0 ;y< destHeight;y++){
 		for (int x = 0 ;x< destWidth;x++){
 			int destPixel = bpp*(y*destWidth+x);
-			//int sourcePixel = bpp*(y*sourceWidth*yFactor+x*xFactor);
 			int sourceX= (x*xFactor)/100;
 			int sourceY = (y*yFactor)/100;
 			int sourcePixel = bpp*(sourceY*sourceWidth+sourceX);
@@ -541,23 +542,23 @@ void testApp::clearPixelArrays(unsigned char* pixelArray,int Width,int Height,un
 	}
 }
 
-float testApp::lengthSquare (float x, float y) {
+double testApp::lengthSquare (double x, double y) {
   return pow(x,2)+pow(y,2);
 }
 
-float testApp::length (float x, float y) {
+double testApp::length (double x, double y) {
   return pow(lengthSquare(x,y),0.5);
 }
 
-ofPoint testApp::getMappingPoint (ofPoint p, ofPoint q, float u, float v) {
-  float vx =  q.y - p.y;
-  float vy = -q.x + p.x;
-  float hx =  q.x - p.x;
-  float hy =  q.y - p.y;
-  float vu = length(vx, vy);
+ofPoint testApp::getMappingPoint (ofPoint p, ofPoint q, double u, double v) {
+  double vx =  q.y - p.y;
+  double vy = -q.x + p.x;
+  double hx =  q.x - p.x;
+  double hy =  q.y - p.y;
+  double vu = length(vx, vy);
 
-  float sx = p.x + u*hx + (vx/vu)*v;
-  float sy = p.y + u*hy + (vy/vu)*v;
+  double sx = p.x + u*hx + (vx/vu)*v;
+  double sy = p.y + u*hy + (vy/vu)*v;
 
   return ofPoint(sx, sy);
 }

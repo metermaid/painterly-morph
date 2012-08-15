@@ -16,6 +16,12 @@ UPDATES SINCE FINAL PRESENTATION
 I changed the face morphing to use user defined points (STILL BROKEN)
 Stroke orientations look a bit better than before, with the simply reasoning that most people do paint from the top left corner outwards
 There's a sort of simplistic colour matching going on, with a predetermined palette based on Modigliani's pre existing paintings
+Edge detection because he defines his borders :)
+
+FUTURE WORK
+Curve those brush strokes/add more to the brush dictionary
+Image parsing!
+Different styles?
 
 CREDITS
 

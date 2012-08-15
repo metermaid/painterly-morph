@@ -32,9 +32,9 @@ class testApp : public ofSimpleApp{
 		void morph();
 		void edges();
 		void getPaletteColour(double* R, double* G, double* B);
-        float lengthSquare (float x, float y);
-        float length (float x, float y);
-        ofPoint getMappingPoint (ofPoint p, ofPoint q, float u, float v);
+        double lengthSquare (double x, double y);
+        double length (double x, double y);
+        ofPoint getMappingPoint (ofPoint p, ofPoint q, double u, double v);
 
         #define CLIP(val, low, high) {if(val<low) val=low; if(val>high)val=high;}
 
