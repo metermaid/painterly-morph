@@ -1739,7 +1739,8 @@
 1342684724 source:c:\openframeworks\addons\ofxcv\libs\ofxcv\src\mytracker.cpp
 	"ofxCv/MyTracker.h"
 
-1344837410 c:\openframeworks\examples\graphics\project\src\testapp.h
+1345023337 c:\openframeworks\examples\graphics\project\src\testapp.h
+	<list>
 	"ofMain.h"
 	"ofxVectorField.h"
 
@@ -1748,6 +1749,6 @@
 	"testApp.h"
 	"ofAppGlutWindow.h"
 
-1344909054 source:c:\openframeworks\examples\graphics\project\src\testapp.cpp
+1345021520 source:c:\openframeworks\examples\graphics\project\src\testapp.cpp
 	"testApp.h"
 

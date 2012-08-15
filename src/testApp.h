@@ -1,6 +1,7 @@
 #ifndef _TEST_APP
 #define _TEST_APP
 
+#include <list>
 
 #include "ofMain.h"
 #include "ofxVectorField.h"
@@ -30,21 +31,24 @@ class testApp : public ofSimpleApp{
 		void Convolve(int horizontal,int vertical,unsigned char* R,unsigned char* G,unsigned char* B,int MatrixSize,double* Matrix,int width,unsigned char pixels[]);
 		void morph();
 		void edges();
+		void getPaletteColour(double* R, double* G, double* B);
+        double lengthSquare (double x, double y);
+        double length (double x, double y);
+        ofPoint getMappingPoint (ofPoint p, ofPoint q, double u, double v);
 
-		//************** Pixel by Pixel course macros (works like a method but is precompiled with the rest of the code******************************************
-		#define CLIP(val, low, high) {if(val<low) val=low; if(val>high)val=high;}
-
+        #define CLIP(val, low, high) {if(val<low) val=low; if(val>high)val=high;}
 
 		//*********************************************** global variables (actually class variables) ***********************************************************
 
 		int						    width, height;
-		unsigned char				*ourImagePixels, *ourResultPixels, *displayPixels, *edgePixels;
+		unsigned char				*ourImagePixels, *ourReferencePixels, *ourResultPixels, *displayPixels, *edgePixels;
 		ofTexture					ourResultTexture;
-		ofImage					    inputImage, referenceImage;
+		ofImage					    inputImage, referenceImage, morphedImage;
 		ofImage                     resultImage, displayImage, edgeImage;
         ofImage                     coarse, medium, fine, edge;
         ofxVectorField              vectorField;
         string                      pointFile;
+        list<ofVec3f>             colourPalette;
 };
 
 #endif

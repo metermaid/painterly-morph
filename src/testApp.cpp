@@ -2,25 +2,50 @@
 using namespace std;
 int threshold = 30;
 
+
+#define mA 0.1
+#define mP 1
+#define mB 1
+#define FRAMENUM 60
+#define GAIN 40.0
+
 string picture = "anne";
 //--------------------------------------------------------------
 void testApp::setup(){
+
+    // fill our palette with colours modigliani used! (http://www.colorhunter.com/tag/modigliani/)
+    colourPalette.push_back(ofVec3f(0,0,0)); // black
+    colourPalette.push_back(ofVec3f(63,18,37)); // purple
+    colourPalette.push_back(ofVec3f(56,73,81)); // blue ish
+    colourPalette.push_back(ofVec3f(140,132,47)); // olive
+    colourPalette.push_back(ofVec3f(152,46,4)); // red orange lips
+    colourPalette.push_back(ofVec3f(70,50,6)); // a yellowy brown
+    colourPalette.push_back(ofVec3f(60,23,16)); // redder brown
+    colourPalette.push_back(ofVec3f(180,0,0)); // deep red
+    colourPalette.push_back(ofVec3f(235,200,193)); // pink
+    colourPalette.push_back(ofVec3f(229,211,140)); // beige
+    colourPalette.push_back(ofVec3f(217,135,53)); // medium unsaturated orange
+    colourPalette.push_back(ofVec3f(241,182,91)); // light orange
+    colourPalette.push_back(ofVec3f(255,147,0)); // bright orange
+    colourPalette.push_back(ofVec3f(255,247,227)); // off-white
+
     inputImage.loadImage(picture + ".jpg");
     height = inputImage.height;
 	width = inputImage.width;
 	ofSetWindowShape(width, height);
 	edgeImage = inputImage;
-    referenceImage.loadImage("jeanne.jpg");
+    referenceImage.loadImage("composite.jpg");
     pointFile = (picture + ".txt");
     morph(); // morphs, outputs to input again!!
 
     ourImagePixels = inputImage.getPixels();
+    ourReferencePixels = referenceImage.getPixels();
     ourResultTexture = *  new ofTexture();								// create a ofTexture to hold the result info
 	ourResultTexture.allocate(width, height, GL_RGB);					// allocate memory for the ofTextue (This is RGB no Alpha)
 	edgePixels = new unsigned char[width*height*3];
 	ourResultPixels = new unsigned char[width*height*4];
 
-    vectorField.setup(1000, 1000, 10);
+    vectorField.setup(width, height, 10);
     vectorField.setFromImage(inputImage);
     vectorField.normalize();
 	vectorField.scale(5);
@@ -152,137 +177,120 @@ void testApp::draw(){
 //// CUSTOM STUFF
 ////--------------------------------------------------------------
 void testApp::morph() {
-    // ahhhhhhhhh!!
-    vector< pair <ofPoint, ofPoint> > srcFeatures;
-    vector< pair <ofPoint, ofPoint> > destFeatures;
+
+    vector< pair <ofPoint, ofPoint> > srcFeatures; // THIS IS MODIGLIANI COMPOSITE
+    vector< pair <ofPoint, ofPoint> > destFeatures; // THIS IS INPUT
 
     ofBuffer featureBuffer = ofBufferFromFile(pointFile);
     double asx, asy, aex, aey, bsx, bsy, bex, bey;
     int featureNum;
     featureNum = featureBuffer.size();
-    for (int i=0; i < featureNum; i++) {
-      string line = featureBuffer.getFirstLine();
-      line >> asx >> asy >> aex >> aey >> bsx >> bsy >> bex >> bey;
-      ofPoint p1=ofPoint(asx,asy);
-      ofPoint p2=ofPoint(aex,aey);
-      srcFeatures.push_back(make_pair(p1,p2));
-      ofPoint p3=ofPoint(bsx,bsy);
-      ofPoint p4=ofPoint(bex,bey);
-      destFeatures.push_back(make_pair(p3,p4));
+    string line;
+    stringstream lineStream;
+    line = featureBuffer.getFirstLine();
+    while (!featureBuffer.isLastLine()) {
+        lineStream << line;
+        lineStream >> asx >> asy >> aex >> aey >> bsx >> bsy >> bex >> bey;
+        ofPoint p1=ofPoint(asx,asy);
+        ofPoint p2=ofPoint(aex,aey);
+        srcFeatures.push_back(make_pair(p1,p2));
+        ofPoint p3=ofPoint(bsx,bsy);
+        ofPoint p4=ofPoint(bex,bey);
+        destFeatures.push_back(make_pair(p3,p4));
+        line = featureBuffer.getNextLine();
     }
 
-    for (int y=0; y<height; y++) {
-        for (int x=0; x<width; x++) {
-            double sumsdx=0, sumsdy=0, sumddx=0, sumddy=0, sumweight=0;
-            for (int i=0; i<featureNum; i++) {
-                double u,v,rawv,weight;
-                pair<ofPoint,ofPoint> tp = destFeatures[i];
-            }
-        }
-    }
 
-    vector< pair <CvPoint, CvPoint> > targetFeatures(destFeatureNum);
-  int fileIndex = 0;
+    vector< pair <ofPoint, ofPoint> > targetFeatures(featureNum);
 
-  // increase time parameter
-  for (double t=0; t<=1.0F; t+=1.0F/FRAMENUM) {
     // calculate intermediate feature line
-    for (int i=0; i<destFeatureNum; i++) {
-      pair <CvPoint, CvPoint> sp = srcFeatures[i];
-      pair <CvPoint, CvPoint> dp = destFeatures[i];
-      CvPoint t1 = cvPoint( (1.0F-t)*sp.first.x + t*dp.first.x, (1.0F-t)*sp.first.y + t*dp.first.y );
-      CvPoint t2 = cvPoint( (1.0F-t)*sp.second.x + t*dp.second.x, (1.0F-t)*sp.second.y + t*dp.second.y );
-      targetFeatures[i] = mp(t1, t2);
+    for (int i=0; i<featureNum; i++) {
+        pair <ofPoint, ofPoint> sp = srcFeatures[i];
+        pair <ofPoint, ofPoint> dp = destFeatures[i];
+        ofPoint t1 = ofPoint( (0.5F)*sp.first.x + 0.5F*dp.first.x, (0.5F)*sp.first.y + 0.5F*dp.first.y );
+        ofPoint t2 = ofPoint( (0.5F)*sp.second.x + 0.5F*dp.second.x, (0.5F)*sp.second.y + 0.5F*dp.second.y );
+        targetFeatures[i] = make_pair(t1, t2);
     }
 
     // calculate warped images from src image and dest image, and cross-dissolve two warped images into target image
-    for (int y=0; y<h; y++) {
-      for (int x=0; x<w; x++) {
-        // warping
-        double sumsdx=0, sumsdy=0, sumddx=0, sumddy=0, sumweight=0;
-        for (int i=0; i<destFeatureNum; i++) {
-          // calculate weight for point(x,y) with line(i)
-          double u,v,rawv,weight;
-          {
-            pair<CvPoint,CvPoint> tp = targetFeatures[i];
-            // vertical vector is ps.second.y-ps.first.y, -ps.second.x+ps.first.x
-            double vx =  tp.second.y - tp.first.y;
-            double vy = -tp.second.x + tp.first.x;
-            double hx =  tp.second.x - tp.first.x;
-            double hy =  tp.second.y - tp.first.y;
-            double tx =  x - tp.first.x;
-            double ty =  y - tp.first.y;
+    for (int y=0; y<height; y++) {
+        for (int x=0; x<width; x++) {
+            // warping
+            double sumsdx=0, sumsdy=0, sumddx=0, sumddy=0, sumweight=0;
+            for (int i=0; i<featureNum; i++) {
+                double u,v,rawv,weight;
+                pair<ofPoint,ofPoint> tp = targetFeatures[i];
 
-            // calc u
-            u = (tx*hx + ty*hy) / lengthSquare(hx,hy);
-            double vu = length(vx, vy);
-            rawv = (vx*tx + vy*ty) / vu;
-            if (u <= 0) {
-              // v = PX
-              v = length(tx, ty);
-            } else if (u >= 1) {
-              // v = QX
-              v = length(x - tp.second.x, y - tp.second.y);
-            } else {
-              // vertical vector length
-              v = abs(rawv);
+                double vx =  tp.second.y - tp.first.y;
+                double vy = -tp.second.x + tp.first.x;
+                double hx =  tp.second.x - tp.first.x;
+                double hy =  tp.second.y - tp.first.y;
+                double tx =  x - tp.first.x;
+                double ty =  y - tp.first.y;
+
+                // calc u
+                u = (tx*hx + ty*hy) / lengthSquare(hx,hy);
+                double vu = length(vx, vy);
+                rawv = (vx*tx + vy*ty) / vu;
+                if (u <= 0) {
+                  // v = PX
+                  v = length(tx, ty);
+                } else if (u >= 1) {
+                  // v = QX
+                  v = length(x - tp.second.x, y - tp.second.y);
+                } else {
+                  // vertical vector length
+                  v = abs(rawv);
+                }
+                double lineLength = length(hx, hy);
+                weight = pow ((pow(lineLength, mP)/(mA+v)), mB);
+                CLIP(weight, 0, 1000);
+
+                pair<ofPoint, ofPoint> sf = srcFeatures[i];
+                ofPoint sp = getMappingPoint(sf.first, sf.second, u, rawv);
+                double sdx = x - sp.x;
+                double sdy = y - sp.y;
+                sumsdx += sdx*weight;
+                sumsdy += sdy*weight;
+
+                pair<ofPoint, ofPoint> df = destFeatures[i];
+                ofPoint dp = getMappingPoint(df.first, df.second, u, rawv);
+                double ddx = x - dp.x;
+                double ddy = y - dp.y;
+                sumddx += ddx*weight;
+                sumddy += ddy*weight;
+
+                sumweight += weight;
             }
-            double lineLength = length(hx, hy);
-            weight = pow ((pow(lineLength, P)/(A+v)), B);
-            assert(weight >= 0);
-          }
 
-          {
-            pair<CvPoint, CvPoint> sf = srcFeatures[i];
-            CvPoint sp = getMappingPoint(sf.first, sf.second, u, rawv);
-            double sdx = x - sp.x;
-            double sdy = y - sp.y;
-            sumsdx += sdx*weight;
-            sumsdy += sdy*weight;
-          }
+            double avesdx = sumsdx/sumweight;
+            double avesdy = sumsdy/sumweight;
+            double aveddx = sumddx/sumweight;
+            double aveddy = sumddy/sumweight;
 
-          {
-            pair<CvPoint, CvPoint> df = destFeatures[i];
-            CvPoint dp = getMappingPoint(df.first, df.second, u, rawv);
-            double ddx = x - dp.x;
-            double ddy = y - dp.y;
-            sumddx += ddx*weight;
-            sumddy += ddy*weight;
-          }
+            int sx = (int)(x - avesdx);
+            int sy = (int)(y - avesdy);
+            int dx = (int)(x - aveddx);
+            int dy = (int)(y - aveddy);
+            if (sx < 0 || sx > inputImage.width || sy < 0 || sy > inputImage.height) {
+              continue;
+            }
+            if (dx < 0 || dx > referenceImage.width || dy < 0 || dy > referenceImage.height) {
+              continue;
+            }
+            unsigned char R,G,B, sR,sG,sB, tR,tG,tB;
 
-          sumweight += weight;
+            ourGetPixel(x,y,&R,&G,&B,width,ourImagePixels);
+            ourGetPixel(x,y,&sR,&sG,&sB,width,ourReferencePixels);
+            tR = R+(R+sR)/2;
+            tG = G+(G+sG)/2;
+            tB = B+(B+sB)/2;
+            CLIP(tR,0,255);
+            CLIP(tG,0,255);
+            CLIP(tB,0,255);
+            ourSetPixel(x,y,tR,tG,tB,width,ourImagePixels);
         }
-        double avesdx = sumsdx/sumweight;
-        double avesdy = sumsdy/sumweight;
-        double aveddx = sumddx/sumweight;
-        double aveddy = sumddy/sumweight;
-
-        int sx = (int)(x - avesdx);
-        int sy = (int)(y - avesdy);
-        int dx = (int)(x - aveddx);
-        int dy = (int)(y - aveddy);
-        if (sx < 0 || sx > srcImage->width || sy < 0 || sy > srcImage->height) {
-          continue;
-        }
-        if (dx < 0 || dx > destImage->width || dy < 0 || dy > destImage->height) {
-          continue;
-        }
-
-        // cross-dissolve
-        int destIndex = destImage->widthStep * dy + dx * destImage->nChannels;
-        int srcIndex = srcImage->widthStep * sy + sx * srcImage->nChannels;
-        int targetIndex = morphImage->widthStep * y + x * morphImage->nChannels;
-        for (int i=0; i<morphImage->nChannels; i++) {
-          uchar dp = (destImage->imageData[destIndex+i]);
-          uchar sp = (srcImage->imageData[srcIndex+i]);
-          int diff =  (int)dp - (int)sp;
-          int newvalue = diff * sigmoid(t) + sp;
-          assert(newvalue <= 255 && newvalue >= 0);
-          morphImage->imageData[targetIndex+i] = (uchar)newvalue;
-        }
-      }
     }
-  }
 
 }
 //--------------------------------------------------------------
@@ -308,6 +316,37 @@ void testApp::edges(){
 		}
 	}
 }
+
+// Use a limited palette! Minimize cartesian distance in the palette
+void testApp::getPaletteColour(double* R, double* G, double* B){
+	int numColours;
+	numColours = (int) colourPalette.size();
+    float dist, tempdist;
+    int sR, sG, sB;
+    list<ofVec3f>::iterator it;
+    ofVec3f temp;
+    it=colourPalette.begin();
+    temp = *it;
+    sR = temp.x;
+    sG = temp.y;
+    sB = temp.z;
+    dist = pow(abs(*R-sR),2) + pow(abs(*G-sG),2) + pow(abs(*B-sB),2);
+    it++;
+    for (; it != colourPalette.end(); it++) {
+        temp = *it;
+        tempdist = pow(abs(*R-temp.x),2) + pow(abs(*G-temp.y),2) + pow(abs(*B-temp.z),2);
+        if (dist > tempdist) {
+            sR = temp.x;
+            sG = temp.y;
+            sB = temp.z;
+        }
+    }
+    // meet it half way so it looks like you've mixed colours
+	*R= (*R*2+sR)/3;
+	*G= (*G*2+sG)/3;
+	*B= (*B*2+sB)/3;
+}
+
 ////--------------------------------------------------------------
 //// INPUT STUFF, DEFAULT WITH THIS
 ////--------------------------------------------------------------
@@ -316,21 +355,19 @@ void testApp::keyPressed  (int key){
         picture = "anne";
     }
     else if(key == '2') {
-        picture = "ryan";
+        picture = "carey";
+    }
+    else if(key == '3') {
+        picture = "chanel";
     }
     else {
         return;
     }
     inputImage.loadImage(picture+".jpg");
     pointFile = (picture + ".txt");
-    height = inputImage.height;
-	width = inputImage.width;
+    morph(); // morphs, outputs to input again!!
 	ourImagePixels = inputImage.getPixels();
-    ourResultTexture = *  new ofTexture();								// create a ofTexture to hold the result info
 	ourResultTexture.allocate(width, height, GL_RGB);					// allocate memory for the ofTextue (This is RGB no Alpha)
-	edgePixels = new unsigned char[width*height*3];
-	ourResultPixels = new unsigned char[width*height*4];
-	ofSetWindowShape(width, height);
     /*
     vectorField.setFromImage(inputImage);
     vectorField.normalize();
@@ -397,9 +434,8 @@ void  testApp::Convolve(int horizontal,int vertical,unsigned char* R,unsigned ch
 			countMatrix++;
 		}
 	}
-	CLIP(sumR,0,255);															//calles the CLIP macro that makes sure that the value is between  0 and 255
-	CLIP(sumG,0,255);
-	CLIP(sumB,0,255);
+
+	getPaletteColour(&sumR, &sumG, &sumB);
 
 	*R = sumR;																	// returning the new R,G,B of the center pixel
 	*G = sumG;
@@ -511,4 +547,25 @@ void testApp::clearPixelArrays(unsigned char* pixelArray,int Width,int Height,un
 			pixelArray[Pixel+2]= B;
 		}
 	}
+}
+
+double testApp::lengthSquare (double x, double y) {
+  return pow(x,2)+pow(y,2);
+}
+
+double testApp::length (double x, double y) {
+  return pow(lengthSquare(x,y),0.5);
+}
+
+ofPoint testApp::getMappingPoint (ofPoint p, ofPoint q, double u, double v) {
+  double vx =  q.y - p.y;
+  double vy = -q.x + p.x;
+  double hx =  q.x - p.x;
+  double hy =  q.y - p.y;
+  double vu = length(vx, vy);
+
+  double sx = p.x + u*hx + (vx/vu)*v;
+  double sy = p.y + u*hy + (vy/vu)*v;
+
+  return ofPoint(sx, sy);
 }
