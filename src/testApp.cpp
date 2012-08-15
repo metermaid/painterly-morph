@@ -270,13 +270,13 @@ void testApp::morph() {
 
             ourGetPixel(dx,dy,&dR,&dG,&dB,width,ourImagePixels);
             ourGetPixel(sx,sy,&sR,&sG,&sB,width,ourReferencePixels);
-            tR = dR+(sR-dR)/3;
-            tG = dG+(sG-dG)/3;
-            tB = dB+(sB-dB)/3;
+            tR = sR+(dR-sR)/2;
+            tG = sG+(dG-sG)/2;
+            tB = sB+(dB-sB)/2;
             CLIP(tR,0,255);
             CLIP(tG,0,255);
             CLIP(tB,0,255);
-            ourSetPixel(x,y,dR,dG,dB,width,ourImagePixels);
+            ourSetPixel(x,y,tR,tG,tB,width,ourImagePixels);
         }
     }
 
